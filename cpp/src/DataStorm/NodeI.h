@@ -23,7 +23,7 @@ class SessionI;
 class PublisherSessionI;
 class SubscriberSessionI;
 
-class NodeI : virtual public DataStormContract::Node, public Forwarder, public std::enable_shared_from_this<NodeI>
+class NodeI : virtual public DataStormContract::Node, public std::enable_shared_from_this<NodeI>
 {
 
 public:
@@ -68,8 +68,10 @@ public:
 
     std::shared_ptr<DataStormContract::NodePrx> getProxy() const
     {
-        return Ice::uncheckedCast<DataStormContract::NodePrx>(_proxy);
+        return _proxy;
     }
+
+    void updatePublicProxy(std::shared_ptr<DataStormContract::NodePrx>);
 
     std::shared_ptr<Instance> getInstance() const
     {
@@ -91,12 +93,13 @@ private:
     std::shared_ptr<SubscriberSessionI> createSubscriberSessionServant(const std::shared_ptr<DataStormContract::NodePrx>&);
     std::shared_ptr<PublisherSessionI> createPublisherSessionServant(const std::shared_ptr<DataStormContract::NodePrx>&);
 
-    virtual void forward(const Ice::ByteSeq&, const Ice::Current&) const;
+    void forward(const Ice::ByteSeq&, const Ice::Current&) const;
 
     mutable std::mutex _mutex;
     mutable std::condition_variable _cond;
     std::shared_ptr<Instance> _instance;
     std::shared_ptr<DataStormContract::NodePrx> _proxy;
+    std::shared_ptr<DataStormContract::NodePrx> _publicProxy;
     std::shared_ptr<DataStormContract::SubscriberSessionPrx> _subscriberForwarder;
     std::shared_ptr<DataStormContract::PublisherSessionPrx> _publisherForwarder;
     std::map<Ice::Identity, std::shared_ptr<SubscriberSessionI>> _subscribers;

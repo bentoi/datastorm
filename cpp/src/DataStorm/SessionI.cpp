@@ -12,7 +12,7 @@
 #endif
 
 #include <DataStorm/SessionI.h>
-#include <DataStorm/SessionManager.h>
+#include <DataStorm/ConnectionManager.h>
 #include <DataStorm/NodeI.h>
 #include <DataStorm/Instance.h>
 #include <DataStorm/TopicI.h>
@@ -454,6 +454,12 @@ SessionI::initSamples(long long int topicId, DataSamplesSeq samplesSeq, const Ic
 }
 
 void
+SessionI::destroy(const Ice::Current&)
+{
+    remove();
+}
+
+void
 SessionI::connected(const shared_ptr<SessionPrx>& session,
                     const shared_ptr<Ice::Connection>& connection,
                     const TopicInfoSeq& topics)
@@ -472,7 +478,13 @@ SessionI::connected(const shared_ptr<SessionPrx>& session,
         {
             connection->setAdapter(_instance->getObjectAdapter());
         }
-        _instance->getSessionManager()->add(shared_from_this(), connection);
+        auto self = shared_from_this();
+        _instance->getConnectionManager()->add(self,
+                                               connection,
+                                               [self](auto connection, auto ex)
+                                               {
+                                                   self->disconnected(connection, ex);
+                                               });
         prx = connection->createProxy(session->ice_getIdentity());
     }
     else
@@ -599,7 +611,7 @@ SessionI::destroyImpl(const exception_ptr& ex)
     {
         if(_connection)
         {
-            _instance->getSessionManager()->remove(shared_from_this(), _connection);
+            _instance->getConnectionManager()->remove(shared_from_this(), _connection);
         }
 
         _session = nullptr;
@@ -984,12 +996,6 @@ SubscriberSessionI::SubscriberSessionI(const std::shared_ptr<NodeI>& parent, con
 {
 }
 
-void
-SubscriberSessionI::destroy(const Ice::Current&)
-{
-    _parent->removeSubscriberSession(dynamic_pointer_cast<SubscriberSessionI>(shared_from_this()), nullptr);
-}
-
 vector<shared_ptr<TopicI>>
 SubscriberSessionI::getTopics(const string& name) const
 {
@@ -1078,15 +1084,15 @@ SubscriberSessionI::reconnect() const
     return _parent->createPublisherSession(_node);
 }
 
+void
+SubscriberSessionI::remove()
+{
+    _parent->removeSubscriberSession(dynamic_pointer_cast<SubscriberSessionI>(shared_from_this()), nullptr);
+}
+
 PublisherSessionI::PublisherSessionI(const std::shared_ptr<NodeI>& parent, const shared_ptr<NodePrx>& node) :
     SessionI(parent, node)
 {
-}
-
-void
-PublisherSessionI::destroy(const Ice::Current&)
-{
-    _parent->removePublisherSession(dynamic_pointer_cast<PublisherSessionI>(shared_from_this()), nullptr);
 }
 
 vector<shared_ptr<TopicI>>
@@ -1099,4 +1105,10 @@ bool
 PublisherSessionI::reconnect() const
 {
     return _parent->createSubscriberSession(_node);
+}
+
+void
+PublisherSessionI::remove()
+{
+    _parent->removePublisherSession(dynamic_pointer_cast<PublisherSessionI>(shared_from_this()), nullptr);
 }

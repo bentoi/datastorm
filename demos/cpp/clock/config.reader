@@ -4,14 +4,15 @@
 Ice.Default.Host=localhost
 
 #
-# DataStorm server endpoint
+# Connect to the DataStorm node running on port 10000
 #
-#DataStorm.Node.Server.Endpoints=tcp
+DataStorm.Node.ConnectTo=tcp -p 10000:tcp -p 10001
 
 #
-# DataStorm multicast endpoint
+# Disable server and multicast endpoints
 #
-#DataStorm.Node.Multicast.Endpoints=udp -h 239.255.0.1 -p 10000
+DataStorm.Node.Server=0
+DataStorm.Node.Multicast=0
 
 #
 # DataStorm Tracing

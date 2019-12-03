@@ -24,11 +24,13 @@ namespace DataStormI
 {
 
 class TopicFactoryI;
-class SessionManager;
+class ConnectionManager;
+class LookupSessionManager;
 class TraceLevels;
 class ForwarderManager;
 class NodeI;
 class CallbackExecutor;
+class Timer;
 
 class Instance : public std::enable_shared_from_this<Instance>
 {
@@ -38,10 +40,16 @@ public:
 
     void init();
 
-    std::shared_ptr<SessionManager>
-    getSessionManager() const
+    std::shared_ptr<ConnectionManager>
+    getConnectionManager() const
     {
-        return _sessionManager;
+        return _connectionManager;
+    }
+
+    std::shared_ptr<LookupSessionManager>
+    getLookupSessionManager() const
+    {
+        return _lookupSessionManager;
     }
 
     std::shared_ptr<Ice::Communicator>
@@ -57,9 +65,15 @@ public:
     }
 
     std::shared_ptr<ForwarderManager>
-    getForwarderManager() const
+    getCollocatedForwarder() const
     {
-        return _forwarderManager;
+        return _collocatedForwarder;
+    }
+
+    std::shared_ptr<ForwarderManager>
+    getPublicForwarder() const
+    {
+        return _publicForwarder;
     }
 
     std::shared_ptr<Ice::ObjectAdapter>
@@ -68,8 +82,8 @@ public:
         return _multicastAdapter;
     }
 
-    std::shared_ptr<DataStormContract::TopicLookupPrx>
-    getTopicLookup() const
+    std::shared_ptr<DataStormContract::LookupPrx>
+    getLookup() const
     {
         return _lookup;
     }
@@ -93,9 +107,15 @@ public:
     }
 
     std::shared_ptr<CallbackExecutor>
-    getCallbackExecutor()
+    getCallbackExecutor() const
     {
         return _executor;
+    }
+
+    std::shared_ptr<Timer>
+    getTimer() const
+    {
+        return _timer;
     }
 
     void shutdown();
@@ -108,16 +128,19 @@ public:
 private:
 
     std::shared_ptr<TopicFactoryI> _topicFactory;
-    std::shared_ptr<SessionManager> _sessionManager;
-    std::shared_ptr<ForwarderManager> _forwarderManager;
+    std::shared_ptr<ConnectionManager> _connectionManager;
+    std::shared_ptr<LookupSessionManager> _lookupSessionManager;
+    std::shared_ptr<ForwarderManager> _collocatedForwarder;
+    std::shared_ptr<ForwarderManager> _publicForwarder;
     std::shared_ptr<NodeI> _node;
     std::shared_ptr<Ice::Communicator> _communicator;
     std::shared_ptr<Ice::ObjectAdapter> _adapter;
     std::shared_ptr<Ice::ObjectAdapter> _collocatedAdapter;
     std::shared_ptr<Ice::ObjectAdapter> _multicastAdapter;
-    std::shared_ptr<DataStormContract::TopicLookupPrx> _lookup;
+    std::shared_ptr<DataStormContract::LookupPrx> _lookup;
     std::shared_ptr<TraceLevels> _traceLevels;
     std::shared_ptr<CallbackExecutor> _executor;
+    std::shared_ptr<Timer> _timer;
 
     mutable std::mutex _mutex;
     mutable std::condition_variable _cond;

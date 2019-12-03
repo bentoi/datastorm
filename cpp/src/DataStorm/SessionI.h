@@ -283,6 +283,8 @@ public:
 
     virtual void initSamples(long long int, DataStormContract::DataSamplesSeq, const Ice::Current&) override;
 
+    virtual void destroy(const Ice::Current&) override;
+
     void connected(const std::shared_ptr<DataStormContract::SessionPrx>&,
                    const std::shared_ptr<Ice::Connection>&,
                    const DataStormContract::TopicInfoSeq&);
@@ -350,6 +352,7 @@ protected:
 
     virtual std::vector<std::shared_ptr<TopicI>> getTopics(const std::string&) const = 0;
     virtual bool reconnect() const = 0;
+    virtual void remove() = 0;
 
     const std::shared_ptr<Instance> _instance;
     std::shared_ptr<TraceLevels> _traceLevels;
@@ -374,7 +377,6 @@ class SubscriberSessionI : public SessionI, public DataStormContract::Subscriber
 public:
 
     SubscriberSessionI(const std::shared_ptr<NodeI>&, const std::shared_ptr<DataStormContract::NodePrx>&);
-    virtual void destroy(const Ice::Current&) override;
 
     virtual void s(long long int, long long int, DataStormContract::DataSample, const Ice::Current&) override;
 
@@ -382,6 +384,7 @@ private:
 
     virtual std::vector<std::shared_ptr<TopicI>> getTopics(const std::string&) const override;
     virtual bool reconnect() const override;
+    virtual void remove() override;
 };
 
 class PublisherSessionI : public SessionI, public DataStormContract::PublisherSession
@@ -389,12 +392,12 @@ class PublisherSessionI : public SessionI, public DataStormContract::PublisherSe
 public:
 
     PublisherSessionI(const std::shared_ptr<NodeI>&, const std::shared_ptr<DataStormContract::NodePrx>&);
-    virtual void destroy(const Ice::Current&) override;
 
 private:
 
     virtual std::vector<std::shared_ptr<TopicI>> getTopics(const std::string&) const override;
     virtual bool reconnect() const override;
+    virtual void remove() override;
 };
 
 }

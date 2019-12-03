@@ -58,6 +58,9 @@ public:
     DataStormContract::TopicInfoSeq getTopicReaders() const;
     DataStormContract::TopicInfoSeq getTopicWriters() const;
 
+    DataStormContract::StringSeq getTopicReaderNames() const;
+    DataStormContract::StringSeq getTopicWriterNames() const;
+
     void shutdown() const;
 
 private:

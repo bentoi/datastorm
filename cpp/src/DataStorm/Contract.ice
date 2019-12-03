@@ -26,6 +26,9 @@ sequence<byte> ByteSeq;
 /** A sequence of long */
 sequence<long> LongSeq;
 
+/** A sequence of strings */
+sequence<string> StringSeq;
+
 /** A dictionary of <long, long> */
 dictionary<long, long> LongLongDict;
 
@@ -238,10 +241,14 @@ interface Node
         throws CannotCreateSessionException;
 }
 
-interface TopicLookup
+interface Lookup
 {
     idempotent void announceTopicReader(string topic, Node* node);
     idempotent void announceTopicWriter(string topic, Node* node);
+
+    idempotent void announceTopics(StringSeq readers, StringSeq writers, Node* node);
+
+    Node* createSession(Node* node);
 }
 
 }

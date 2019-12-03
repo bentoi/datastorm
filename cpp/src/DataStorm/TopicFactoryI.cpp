@@ -9,11 +9,12 @@
 #include <DataStorm/NodeI.h>
 #include <DataStorm/TraceUtil.h>
 #include <DataStorm/Instance.h>
+#include <DataStorm/LookupSessionManager.h>
 
 using namespace std;
 using namespace DataStormI;
 
-TopicFactoryI::TopicFactoryI(const shared_ptr<Instance>& instance) : _nextReaderId(0), _nextWriterId(10)
+TopicFactoryI::TopicFactoryI(const shared_ptr<Instance>& instance) : _nextReaderId(0), _nextWriterId(0)
 {
     _instance = instance;
     _traceLevels = _instance->getTraceLevels();
@@ -47,7 +48,8 @@ TopicFactoryI::createTopicReader(const string& name,
         }
     }
     _instance->getNode()->getSubscriberForwarder()->announceTopics({ { name, { reader->getId() } } }, false);
-    _instance->getTopicLookup()->announceTopicReaderAsync(name, _instance->getNode()->getProxy());
+    _instance->getLookup()->announceTopicReaderAsync(name, _instance->getNode()->getProxy());
+    _instance->getLookupSessionManager()->announceTopicReader(name, _instance->getNode()->getProxy());
     return reader;
 }
 
@@ -79,7 +81,8 @@ TopicFactoryI::createTopicWriter(const string& name,
         }
     }
     _instance->getNode()->getPublisherForwarder()->announceTopics({ { name, { writer->getId() } } }, false);
-    _instance->getTopicLookup()->announceTopicWriterAsync(name, _instance->getNode()->getProxy());
+    _instance->getLookup()->announceTopicWriterAsync(name, _instance->getNode()->getProxy());
+    _instance->getLookupSessionManager()->announceTopicWriter(name, _instance->getNode()->getProxy());
     return writer;
 }
 
@@ -196,7 +199,33 @@ TopicFactoryI::getTopicWriters() const
         {
             info.ids.push_back(q->getId());
         }
-        writers.push_back(info);
+        writers.push_back(move(info));
+    }
+    return writers;
+}
+
+DataStormContract::StringSeq
+TopicFactoryI::getTopicReaderNames() const
+{
+    lock_guard<mutex> lock(_mutex);
+    DataStormContract::StringSeq readers;
+    readers.reserve(_readers.size());
+    for(const auto& p : _readers)
+    {
+        readers.push_back(p.first);
+    }
+    return readers;
+}
+
+DataStormContract::StringSeq
+TopicFactoryI::getTopicWriterNames() const
+{
+    lock_guard<mutex> lock(_mutex);
+    DataStormContract::StringSeq writers;
+    writers.reserve(_writers.size());
+    for(const auto& p : _writers)
+    {
+        writers.push_back(p.first);
     }
     return writers;
 }
