@@ -26,45 +26,42 @@ public:
     {
     }
 
-    void createSubscriberSessionAsync(shared_ptr<NodePrx> node,
-                                      shared_ptr<PublisherSessionPrx> session,
-                                      function<void (const shared_ptr<SubscriberSessionPrx>&)> response,
-                                      function<void (exception_ptr)> exception,
-                                      const Ice::Current& current)
+    void createSubscriberSession(shared_ptr<NodePrx> node,
+                                 shared_ptr<PublisherSessionPrx> session,
+                                 const Ice::Current& current)
     {
         assert(node && session);
         session = forward(session, current.con);
         _node->createSubscriberSessionAsync(node,
                                             session,
-                                            [self=shared_from_this(), response=move(response), session, connection=current.con](auto ssession)
-                                            {
-                                                ssession = self->forward(ssession, self->_node->ice_getCachedConnection());
+                                            nullptr,
+                                            [session](auto ex) { session->destroyAsync(); });
+    }
 
-                                                self->_connectionManager->add(session,
-                                                                              self->_node->ice_getCachedConnection(),
-                                                                              [session](auto, auto)
-                                                                              {
-                                                                                  session->destroyAsync();
-                                                                              });
-                                                if(ssession)
-                                                {
-                                                    self->_connectionManager->add(ssession,
-                                                                                  connection,
-                                                                                  [ssession](auto, auto)
-                                                                                  {
-                                                                                      ssession->destroyAsync();
-                                                                                  });
-                                                }
-
-                                                response(ssession);
-                                            },
-                                            move(exception));
+    void ackSubscriberSession(shared_ptr<NodePrx> node,
+                              shared_ptr<SubscriberSessionPrx> session,
+                              const Ice::Current& current)
+    {
+        session = self->forward(session, self->_node->ice_getCachedConnection());
+        self->_connectionManager->add(session,
+                                      self->_node->ice_getCachedConnection(),
+                                      [session](auto, auto)
+                                      {
+                                          session->destroyAsync();
+                                      });
+        if(ssession)
+        {
+            self->_connectionManager->add(ssession,
+                                          connection,
+                                          [ssession](auto, auto)
+                                          {
+                                              ssession->destroyAsync();
+                                          });
+        }
     }
 
     void createPublisherSessionAsync(shared_ptr<NodePrx> node,
                                      shared_ptr<SubscriberSessionPrx> session,
-                                     function<void (const shared_ptr<PublisherSessionPrx>&)> response,
-                                     function<void (exception_ptr)> exception,
                                      const Ice::Current& current)
     {
         assert(node && session);

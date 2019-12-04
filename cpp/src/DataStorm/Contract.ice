@@ -227,18 +227,15 @@ interface SubscriberSession extends Session
     void s(long topicId, long elementId, DataSample sample);
 }
 
-exception CannotCreateSessionException
-{
-    string reason;
-};
-
 interface Node
 {
-    ["amd"] SubscriberSession* createSubscriberSession(Node* publisher, PublisherSession* session)
-        throws CannotCreateSessionException;
+    void createSubscriberSession(Node* publisher, PublisherSession* session);
 
-    ["amd"] PublisherSession* createPublisherSession(Node* subscriber, SubscriberSession* session)
-        throws CannotCreateSessionException;
+    void ackSubscriberSession(Node* subscriber, SubscriberSession* session);
+
+    void createPublisherSession(Node* subscriber, SubscriberSession* session);
+
+    void ackPublisherSession(Node* publisher, PublisherSession* session);
 }
 
 interface Lookup
