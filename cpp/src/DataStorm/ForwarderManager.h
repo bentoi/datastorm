@@ -26,7 +26,6 @@ public:
 
     std::shared_ptr<Ice::ObjectPrx> add(std::function<void(Ice::ByteSeq, Response, Exception, const Ice::Current&)>);
     std::shared_ptr<Ice::ObjectPrx> add(std::function<void(Ice::ByteSeq, const Ice::Current&)>);
-    std::shared_ptr<Ice::ObjectPrx> add(std::shared_ptr<Ice::ObjectPrx>);
     void remove(const Ice::Identity&);
 
 private:

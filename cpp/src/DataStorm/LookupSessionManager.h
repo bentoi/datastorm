@@ -42,7 +42,16 @@ public:
                         const std::shared_ptr<DataStormContract::NodePrx>&,
                         const std::shared_ptr<Ice::Connection>& = nullptr) const;
 
+    std::shared_ptr<LookupSessionI> getSession(const std::shared_ptr<DataStormContract::NodePrx>&) const;
+    std::shared_ptr<LookupSessionI> getSession(const std::string&) const;
+
+    const std::shared_ptr<Ice::Object>& getSessionForwarder() const
+    {
+        return _sessionForwarder;
+    }
+
     void forward(const Ice::ByteSeq&, const Ice::Current&) const;
+
     void destroy() const;
 
 private:
@@ -63,10 +72,12 @@ private:
     mutable std::mutex _mutex;
 
     std::map<Ice::Identity, std::shared_ptr<LookupSessionI>> _sessions;
-    std::map<Ice::Identity, std::shared_ptr<DataStormContract::LookupPrx>> _connectedTo;
+    std::map<Ice::Identity, std::pair<std::shared_ptr<DataStormContract::NodePrx>,
+                                      std::shared_ptr<DataStormContract::LookupPrx>>> _connectedTo;
 
     mutable std::shared_ptr<Ice::Connection> _exclude;
     std::shared_ptr<DataStormContract::LookupPrx> _forwarder;
+    std::shared_ptr<Ice::Object> _sessionForwarder;
 };
 
 }

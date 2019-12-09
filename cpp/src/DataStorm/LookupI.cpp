@@ -25,8 +25,8 @@ LookupI::announceTopicReader(string name, shared_ptr<NodePrx> proxy, const Ice::
     {
         proxy = Ice::uncheckedCast<NodePrx>(current.con->createProxy(proxy->ice_getIdentity()));
     }
-    _instance->getTopicFactory()->createSubscriberSession(name, proxy);
     _instance->getLookupSessionManager()->announceTopicReader(name, proxy, current.con);
+    _instance->getTopicFactory()->createSubscriberSession(name, proxy);
 }
 
 void
@@ -36,8 +36,8 @@ LookupI::announceTopicWriter(string name, shared_ptr<NodePrx> proxy, const Ice::
     {
         proxy = Ice::uncheckedCast<NodePrx>(current.con->createProxy(proxy->ice_getIdentity()));
     }
-    _instance->getTopicFactory()->createPublisherSession(name, proxy);
     _instance->getLookupSessionManager()->announceTopicWriter(name, proxy, current.con);
+    _instance->getTopicFactory()->createPublisherSession(name, proxy);
 }
 
 void
@@ -48,6 +48,7 @@ LookupI::announceTopics(StringSeq readers, StringSeq writers, shared_ptr<NodePrx
         proxy = Ice::uncheckedCast<NodePrx>(current.con->createProxy(proxy->ice_getIdentity()));
     }
 
+    _instance->getLookupSessionManager()->announceTopics(readers, writers, proxy, current.con);
     for(auto name : readers)
     {
         _instance->getTopicFactory()->createSubscriberSession(name, proxy);
@@ -56,7 +57,6 @@ LookupI::announceTopics(StringSeq readers, StringSeq writers, shared_ptr<NodePrx
     {
         _instance->getTopicFactory()->createPublisherSession(name, proxy);
     }
-    _instance->getLookupSessionManager()->announceTopics(readers, writers, proxy, current.con);
 }
 
 shared_ptr<NodePrx>

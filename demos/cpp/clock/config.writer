@@ -11,7 +11,7 @@ DataStorm.Node.ConnectTo=tcp -p 10001:tcp -p 10000
 #
 # Disable server and multicast endpoints
 #
-DataStorm.Node.Server=0
+#DataStorm.Node.Server=0
 DataStorm.Node.Multicast=0
 
 #

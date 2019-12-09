@@ -5,15 +5,13 @@
 // **********************************************************************
 
 #include <DataStorm/ConnectionManager.h>
-#include <DataStorm/ForwarderManager.h>
 #include <DataStorm/CallbackExecutor.h>
 
 using namespace std;
 using namespace DataStormI;
 
-ConnectionManager::ConnectionManager(const shared_ptr<CallbackExecutor>& executor,
-                                     const shared_ptr<ForwarderManager>& forwarder) :
-    _executor(executor), _forwarder(forwarder)
+ConnectionManager::ConnectionManager(const shared_ptr<CallbackExecutor>& executor) :
+    _executor(executor)
 {
 }
 
@@ -32,14 +30,6 @@ ConnectionManager::add(const shared_ptr<void>& object,
         });
     }
     objects.emplace(move(object), move(callback));
-}
-
-shared_ptr<Ice::ObjectPrx>
-ConnectionManager::addForwarder(const shared_ptr<Ice::ObjectPrx>& proxy, const shared_ptr<Ice::Connection>& connection)
-{
-    auto prx = _forwarder->add(connection->createProxy(proxy->ice_getIdentity()));
-    add(prx, connection, [prx, forwarder=_forwarder](auto, auto) { forwarder->remove(prx->ice_getIdentity()); });
-    return prx;
 }
 
 void
@@ -79,13 +69,6 @@ ConnectionManager::remove(const shared_ptr<Ice::Connection>& connection)
         object.second(connection, ex);
     }
     _executor->flush();
-}
-
-void
-ConnectionManager::removeForwarder(const shared_ptr<Ice::ObjectPrx>& prx, const shared_ptr<Ice::Connection>& connection)
-{
-    remove(prx, connection);
-    _forwarder->remove(prx->ice_getIdentity());
 }
 
 void

@@ -70,12 +70,6 @@ public:
         return _collocatedForwarder;
     }
 
-    std::shared_ptr<ForwarderManager>
-    getPublicForwarder() const
-    {
-        return _publicForwarder;
-    }
-
     std::shared_ptr<Ice::ObjectAdapter>
     getMulticastObjectAdapter() const
     {
@@ -131,7 +125,6 @@ private:
     std::shared_ptr<ConnectionManager> _connectionManager;
     std::shared_ptr<LookupSessionManager> _lookupSessionManager;
     std::shared_ptr<ForwarderManager> _collocatedForwarder;
-    std::shared_ptr<ForwarderManager> _publicForwarder;
     std::shared_ptr<NodeI> _node;
     std::shared_ptr<Ice::Communicator> _communicator;
     std::shared_ptr<Ice::ObjectAdapter> _adapter;

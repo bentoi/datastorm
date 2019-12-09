@@ -229,13 +229,9 @@ interface SubscriberSession extends Session
 
 interface Node
 {
-    void createSubscriberSession(Node* publisher, PublisherSession* session);
-
-    void ackSubscriberSession(Node* subscriber, SubscriberSession* session);
-
-    void createPublisherSession(Node* subscriber, SubscriberSession* session);
-
-    void ackPublisherSession(Node* publisher, PublisherSession* session);
+    void tryCreateSession(Node* publisher);
+    void createSession(Node* subscriber, SubscriberSession* session);
+    void ackCreateSession(Node* publisher, PublisherSession* session);
 }
 
 interface Lookup

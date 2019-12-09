@@ -20,25 +20,14 @@ class ConnectionManager
 {
 public:
 
-    ConnectionManager(const std::shared_ptr<CallbackExecutor>&, const std::shared_ptr<ForwarderManager>&);
+    ConnectionManager(const std::shared_ptr<CallbackExecutor>&);
 
     void add(const std::shared_ptr<void>&,
              const std::shared_ptr<Ice::Connection>&,
              std::function<void(const std::shared_ptr<Ice::Connection>&, std::exception_ptr)>);
 
-    template<typename T>
-    std::shared_ptr<T> addForwarder(const std::shared_ptr<Ice::ObjectPrx>& prx,
-                                    const std::shared_ptr<Ice::Connection>& con)
-    {
-        return Ice::uncheckedCast<T>(addForwarder(prx, con));
-    }
-
-    std::shared_ptr<Ice::ObjectPrx> addForwarder(const std::shared_ptr<Ice::ObjectPrx>&,
-                                                 const std::shared_ptr<Ice::Connection>&);
-
     void remove(const std::shared_ptr<void>&, const std::shared_ptr<Ice::Connection>&);
     void remove(const std::shared_ptr<Ice::Connection>&);
-    void removeForwarder(const std::shared_ptr<Ice::ObjectPrx>&, const std::shared_ptr<Ice::Connection>&);
 
     void destroy();
 
@@ -49,7 +38,6 @@ private:
     std::mutex _mutex;
     std::map<std::shared_ptr<Ice::Connection>, std::map<std::shared_ptr<void>, Callback>> _connections;
     std::shared_ptr<CallbackExecutor> _executor;
-    std::shared_ptr<ForwarderManager> _forwarder;
 };
 
 }

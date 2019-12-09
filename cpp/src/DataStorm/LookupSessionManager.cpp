@@ -18,6 +18,43 @@ using namespace std;
 using namespace DataStormI;
 using namespace DataStormContract;
 
+namespace
+{
+
+class SessionForwarderI : public Ice::Blobject
+{
+public:
+
+    SessionForwarderI(shared_ptr<LookupSessionManager> lookupSessionManager) :
+        _lookupSessionManager(move(lookupSessionManager))
+    {
+    }
+
+    virtual bool
+    ice_invoke(Ice::ByteSeq inEncaps, Ice::ByteSeq&, const Ice::Current& curr)
+    {
+        auto pos = curr.id.name.find('-');
+        if(pos != string::npos && pos < curr.id.name.length())
+        {
+            auto s = _lookupSessionManager->getSession(curr.id.name.substr(pos + 1));
+            if(s)
+            {
+                auto id = Ice::Identity { curr.id.name.substr(0, pos), curr.id.category };
+                s->getLookup()->ice_identity(id)->ice_invokeAsync(curr.operation, curr.mode, inEncaps, curr.ctx);
+                return true;
+            }
+        }
+        throw Ice::ObjectNotExistException(__FILE__, __LINE__, curr.id, curr.facet, curr.operation);
+    }
+
+private:
+
+    shared_ptr<LookupSessionManager> _lookupSessionManager;
+};
+
+}
+
+
 LookupSessionManager::LookupSessionManager(shared_ptr<Instance> instance) :
     _instance(move(instance)),
     _traceLevels(_instance->getTraceLevels())
@@ -29,6 +66,8 @@ LookupSessionManager::init()
 {
     auto forwarder = [self=shared_from_this()](Ice::ByteSeq e, const Ice::Current& c) { self->forward(e, c); };
     _forwarder = Ice::uncheckedCast<LookupPrx>(_instance->getCollocatedForwarder()->add(move(forwarder)));
+
+    _sessionForwarder = make_shared<SessionForwarderI>(shared_from_this());
 
     auto communicator = _instance->getCommunicator();
     auto connectTo = communicator->getProperties()->getProperty("DataStorm.Node.ConnectTo");
@@ -57,7 +96,7 @@ LookupSessionManager::create(const shared_ptr<NodePrx>& node, const shared_ptr<I
     _sessions.emplace(node->ice_getIdentity(), make_shared<LookupSessionI>(_instance, node, connection));
 
     auto self = shared_from_this();
-    _instance->getConnectionManager()->add(self, connection, [=](auto connection, auto ex)
+    _instance->getConnectionManager()->add(node, connection, [=](auto connection, auto ex)
     {
         self->destroySession(node);
     });
@@ -168,6 +207,30 @@ LookupSessionManager::announceTopics(const StringSeq& readers,
     }
 }
 
+shared_ptr<LookupSessionI>
+LookupSessionManager::getSession(const shared_ptr<NodePrx>& node) const
+{
+    unique_lock<mutex> lock(_mutex);
+    auto p = _sessions.find(node->ice_getIdentity());
+    if(p != _sessions.end())
+    {
+        return p->second;
+    }
+    return nullptr;
+}
+
+shared_ptr<LookupSessionI>
+LookupSessionManager::getSession(const string& name) const
+{
+    unique_lock<mutex> lock(_mutex);
+    auto p = _sessions.find({ name, "" });
+    if(p != _sessions.end())
+    {
+        return p->second;
+    }
+    return nullptr;
+}
+
 void
 LookupSessionManager::forward(const Ice::ByteSeq& inEncaps, const Ice::Current& current) const
 {
@@ -175,14 +238,14 @@ LookupSessionManager::forward(const Ice::ByteSeq& inEncaps, const Ice::Current& 
     {
         if(session.second->getConnection() != _exclude)
         {
-            session.second->forward(inEncaps, current);
+            session.second->getLookup()->ice_invokeAsync(current.operation, current.mode, inEncaps, current.ctx);
         }
     }
     for(const auto& lookup : _connectedTo)
     {
-        if(lookup.second->ice_getCachedConnection() != _exclude)
+        if(lookup.second.second->ice_getCachedConnection() != _exclude)
         {
-            lookup.second->ice_invokeAsync(current.operation, current.mode, inEncaps, current.ctx);
+            lookup.second.second->ice_invokeAsync(current.operation, current.mode, inEncaps, current.ctx);
         }
     }
 }
@@ -196,15 +259,26 @@ LookupSessionManager::destroy() const
 void
 LookupSessionManager::connect(const shared_ptr<LookupPrx>& lookup)
 {
-    lookup->createSessionAsync(_instance->getNode()->getProxy(),
-                               [=](auto node)
-                               {
-                                   connected(node, lookup);
-                               },
-                               [=](auto ex)
-                               {
-                                   disconnected(nullptr, lookup);
-                               });
+    try
+    {
+        lookup->createSessionAsync(_instance->getNode()->getProxy(),
+                                   [=](auto node)
+                                   {
+                                       connected(node, lookup);
+                                   },
+                                   [=](auto ex)
+                                   {
+                                       disconnected(nullptr, lookup);
+                                   });
+    }
+    catch(const Ice::ObjectAdapterDeactivatedException&)
+    {
+        disconnected(nullptr, lookup);
+    }
+    catch(const Ice::CommunicatorDestroyedException&)
+    {
+        disconnected(nullptr, lookup);
+    }
 }
 
 void
@@ -222,16 +296,25 @@ LookupSessionManager::connected(const shared_ptr<NodePrx>& node, const shared_pt
     {
         disconnected(node, lookup);
     });
-    _connectedTo.emplace(node->ice_getIdentity(), lookup);
+    _connectedTo.emplace(node->ice_getIdentity(), make_pair(node, lookup));
 
-    lookup->announceTopicsAsync(_instance->getTopicFactory()->getTopicReaderNames(),
-                                _instance->getTopicFactory()->getTopicWriterNames(),
-                                _instance->getNode()->getProxy());
+    try
+    {
+        lookup->announceTopicsAsync(_instance->getTopicFactory()->getTopicReaderNames(),
+                                    _instance->getTopicFactory()->getTopicWriterNames(),
+                                    _instance->getNode()->getProxy());
+    }
+    catch(const Ice::ObjectAdapterDeactivatedException&)
+    {
+    }
+    catch(const Ice::CommunicatorDestroyedException&)
+    {
+    }
 
     Ice::EndpointSeq endpoints;
     for(const auto& p : _connectedTo)
     {
-        auto endpts = p.second->ice_getEndpoints();
+        auto endpts = p.second.first->ice_getEndpoints();
         endpoints.insert(endpoints.end(), endpts.begin(), endpts.end());
     }
     _instance->getNode()->updatePublicProxy(_instance->getNode()->getProxy()->ice_endpoints(endpoints));

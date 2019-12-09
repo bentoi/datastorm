@@ -34,29 +34,23 @@ public:
     void init();
     void destroy(bool);
 
-    bool createSubscriberSession(const std::shared_ptr<DataStormContract::NodePrx>&);
+    void createSubscriberSession(const std::shared_ptr<DataStormContract::NodePrx>&);
+    void createPublisherSession(const std::shared_ptr<DataStormContract::NodePrx>&);
 
-    void createSubscriberSession(std::shared_ptr<DataStormContract::NodePrx>,
-                                 std::shared_ptr<DataStormContract::PublisherSessionPrx>,
-                                 const Ice::Current&);
+    virtual void tryCreateSession(std::shared_ptr<DataStormContract::NodePrx>, const Ice::Current&) override;
+    virtual void createSession(std::shared_ptr<DataStormContract::NodePrx>,
+                               std::shared_ptr<DataStormContract::SubscriberSessionPrx>,
+                               const Ice::Current&) override;
+    virtual void ackCreateSession(std::shared_ptr<DataStormContract::NodePrx>,
+                                  std::shared_ptr<DataStormContract::PublisherSessionPrx>,
+                                  const Ice::Current&) override;
 
-    void ackSubscriberSession(std::shared_ptr<DataStormContract::NodePrx>,
-                              std::shared_ptr<DataStormContract::SubscriberSessionPrx>,
-                              const Ice::Current&);
-
-    void removeSubscriberSession(const std::shared_ptr<SubscriberSessionI>&, const std::exception_ptr&);
-
-    bool createPublisherSession(const std::shared_ptr<DataStormContract::NodePrx>&);
-
-    void createPublisherSession(std::shared_ptr<DataStormContract::NodePrx>,
-                                std::shared_ptr<DataStormContract::SubscriberSessionPrx>,
-                                const Ice::Current&);
-
-    void ackPublisherSession(std::shared_ptr<DataStormContract::NodePrx>,
-                             std::shared_ptr<DataStormContract::PublisherSessionPrx>,
-                             const Ice::Current&);
-
-    void removePublisherSession(const std::shared_ptr<PublisherSessionI>&, const std::exception_ptr&);
+    void removeSubscriberSession(const std::shared_ptr<DataStormContract::NodePrx>&,
+                                 const std::shared_ptr<SubscriberSessionI>&,
+                                 const std::exception_ptr&);
+    void removePublisherSession(const std::shared_ptr<DataStormContract::NodePrx>&,
+                                 const std::shared_ptr<PublisherSessionI>&,
+                                const std::exception_ptr&);
 
     std::shared_ptr<Ice::Connection> getSessionConnection(const std::string&) const;
 

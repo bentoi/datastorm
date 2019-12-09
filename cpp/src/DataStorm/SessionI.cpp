@@ -471,13 +471,11 @@ SessionI::connected(const shared_ptr<SessionPrx>& session,
         return;
     }
 
-    shared_ptr<Ice::ObjectPrx> prx;
+    _session = session;
+    _connection = connection;
     if(connection)
     {
-        if(!connection->getAdapter())
-        {
-            connection->setAdapter(_instance->getObjectAdapter());
-        }
+        assert(connection->getAdapter());
         auto self = shared_from_this();
         _instance->getConnectionManager()->add(self,
                                                connection,
@@ -485,14 +483,8 @@ SessionI::connected(const shared_ptr<SessionPrx>& session,
                                                {
                                                    self->disconnected(connection, ex);
                                                });
-        prx = connection->createProxy(session->ice_getIdentity());
     }
-    else
-    {
-        prx = _instance->getObjectAdapter()->createProxy(session->ice_getIdentity());
-    }
-    _connection = connection;
-    _session = Ice::uncheckedCast<SessionPrx>(prx->ice_oneway());
+
     ++_sessionInstanceId;
 
     if(_traceLevels->session > 0)
@@ -511,7 +503,7 @@ SessionI::connected(const shared_ptr<SessionPrx>& session,
         {
             _session->announceTopicsAsync(topics, true);
         }
-        catch(const Ice::LocalException&)
+        catch(const Ice::LocalException& ex)
         {
             // Ignore
         }
@@ -527,6 +519,7 @@ SessionI::connected(const shared_ptr<SessionPrx>& session,
 void
 SessionI::disconnected(const shared_ptr<Ice::Connection>& connection, exception_ptr ex)
 {
+    shared_ptr<NodePrx> node;
     {
         lock_guard<mutex> lock(_mutex);
         if(_destroyed || (connection && _connection != connection) || !_session)
@@ -566,6 +559,7 @@ SessionI::disconnected(const shared_ptr<Ice::Connection>& connection, exception_
 
         _session = nullptr;
         _connection = nullptr;
+        node = _node;
     }
 
     //
@@ -573,7 +567,7 @@ SessionI::disconnected(const shared_ptr<Ice::Connection>& connection, exception_
     //
     // TODO: Improve retry logic.
     //
-    if(connection && !reconnect())
+    if(connection && !reconnect(node))
     {
         _proxy->destroy();
     }
@@ -594,7 +588,12 @@ SessionI::destroyImpl(const exception_ptr& ex)
         {
             try
             {
-                rethrow_exception(ex);
+                throw Ice::CloseConnectionException(__FILE__, __LINE__);
+//                rethrow_exception(ex);
+            }
+            catch(const Ice::Exception& e)
+            {
+                out << "\n:" << e.what() << "\n" << e.ice_stackTrace();
             }
             catch(const exception& e)
             {
@@ -655,6 +654,20 @@ SessionI::getSession() const
 {
     lock_guard<mutex> lock(_mutex);
     return _session;
+}
+
+shared_ptr<NodePrx>
+SessionI::getNode() const
+{
+    lock_guard<mutex> lock(_mutex);
+    return _node;
+}
+
+void
+SessionI::setNode(shared_ptr<NodePrx> node)
+{
+    lock_guard<mutex> lock(_mutex);
+    _node = node;
 }
 
 void
@@ -1079,15 +1092,17 @@ SubscriberSessionI::s(long long int topicId, long long int elementId, DataSample
 }
 
 bool
-SubscriberSessionI::reconnect() const
+SubscriberSessionI::reconnect(const shared_ptr<NodePrx>& node) const
 {
-    return _parent->createPublisherSession(_node);
+    // TODO: XXX return
+    _parent->createPublisherSession(node);
+    return true;
 }
 
 void
 SubscriberSessionI::remove()
 {
-    _parent->removeSubscriberSession(dynamic_pointer_cast<SubscriberSessionI>(shared_from_this()), nullptr);
+    _parent->removeSubscriberSession(getNode(), dynamic_pointer_cast<SubscriberSessionI>(shared_from_this()), nullptr);
 }
 
 PublisherSessionI::PublisherSessionI(const std::shared_ptr<NodeI>& parent, const shared_ptr<NodePrx>& node) :
@@ -1102,13 +1117,15 @@ PublisherSessionI::getTopics(const string& name) const
 }
 
 bool
-PublisherSessionI::reconnect() const
+PublisherSessionI::reconnect(const shared_ptr<NodePrx>& node) const
 {
-    return _parent->createSubscriberSession(_node);
+    // TODO: XXX return
+    _parent->createSubscriberSession(node);
+    return true;
 }
 
 void
 PublisherSessionI::remove()
 {
-    _parent->removePublisherSession(dynamic_pointer_cast<PublisherSessionI>(shared_from_this()), nullptr);
+    _parent->removePublisherSession(getNode(), dynamic_pointer_cast<PublisherSessionI>(shared_from_this()), nullptr);
 }

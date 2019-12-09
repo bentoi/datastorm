@@ -24,13 +24,20 @@ public:
                    std::shared_ptr<DataStormContract::NodePrx>,
                    std::shared_ptr<Ice::Connection>);
 
-    void forward(const Ice::ByteSeq&, const Ice::Current&) const;
     void destroy();
 
-    const std::shared_ptr<DataStormContract::NodePrx> getPublicNode() const { return _publicNode; }
+    const std::shared_ptr<DataStormContract::NodePrx>& getPublicNode() const { return _publicNode; }
+    const std::shared_ptr<DataStormContract::LookupPrx>& getLookup() const { return _lookup; }
     const std::shared_ptr<Ice::Connection>& getConnection() const { return _connection; }
+    template<typename T> std::shared_ptr<T> getSessionForwarder(const std::shared_ptr<T>& session) const
+    {
+        return Ice::uncheckedCast<T>(forwarder(session));
+    }
 
-protected:
+private:
+
+    std::shared_ptr<DataStormContract::SessionPrx>
+    forwarder(const std::shared_ptr<DataStormContract::SessionPrx>&) const;
 
     const std::shared_ptr<Instance> _instance;
     const std::shared_ptr<TraceLevels> _traceLevels;

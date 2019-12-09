@@ -60,12 +60,8 @@ Instance::Instance(const shared_ptr<Ice::Communicator>& communicator) : _communi
     _collocatedForwarder = make_shared<ForwarderManager>(_collocatedAdapter, "forwarders");
     _collocatedAdapter->addDefaultServant(_collocatedForwarder, "forwarders");
 
-    auto category = IceUtil::generateUUID();
-    _publicForwarder = make_shared<ForwarderManager>(_adapter, category);
-    _adapter->addDefaultServant(_publicForwarder, category);
-
     _executor = make_shared<CallbackExecutor>();
-    _connectionManager = make_shared<ConnectionManager>(_executor, _publicForwarder);
+    _connectionManager = make_shared<ConnectionManager>(_executor);
 
     _traceLevels = make_shared<TraceLevels>(_communicator);
 }
@@ -76,11 +72,10 @@ Instance::init()
     auto self = shared_from_this();
 
     _node = make_shared<NodeI>(self);
-    _node->init();
-
+    _lookupSessionManager = make_shared<LookupSessionManager>(self);
     _timer = make_shared<Timer>(self);
 
-    _lookupSessionManager = make_shared<LookupSessionManager>(self);
+    _node->init();
     _lookupSessionManager->init();
 
     _topicFactory = make_shared<TopicFactoryI>(self);

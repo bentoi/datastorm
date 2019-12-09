@@ -48,15 +48,6 @@ ForwarderManager::add(function<void(Ice::ByteSeq, const Ice::Current&)> forwarde
     });
 }
 
-shared_ptr<Ice::ObjectPrx>
-ForwarderManager::add(shared_ptr<Ice::ObjectPrx> proxy)
-{
-    return add([proxy](auto inEncaps, auto response, auto exception, auto current)
-    {
-        proxy->ice_invokeAsync(current.operation, current.mode, inEncaps, response, exception, nullptr, current.ctx);
-    });
-}
-
 void
 ForwarderManager::remove(const Ice::Identity& id)
 {
